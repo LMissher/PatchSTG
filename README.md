@@ -73,7 +73,7 @@ Notably, we show that spatiotemporal graphs can be patched on the spatial dimens
 ## Datasets
 You can access the well pre-processed datasets from [[Google Drive]](https://drive.google.com/drive/folders/1BDH1C66BCKBe7ge8G-rBaj1j3p0iR0TC?usp=sharing), then place the downloaded contents under the correspond dataset folder such as `./data/SD`.
 
-# PreTrained Weights
+## PreTrained Weights
 You can access the pretrained weights from [[Google Drive]](https://drive.google.com/drive/folders/1hFyV2C10P3wl3OJkNNhhHb2LTKXcJ2mO?usp=sharing), then place the downloaded contents under the constructed cpt folder `./cpt`.
 
 ## Quick Demos
