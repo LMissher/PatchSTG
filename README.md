@@ -59,7 +59,7 @@ Notably, we show that spatiotemporal graphs can be patched on the spatial dimens
 ```tex
 └── code-and-data
     ├── config                 # Including detail configurations
-    ├── cpt                    # Storing pre-trained weight files
+    ├── cpt                    # Storing pre-trained weight files (manually create the folder and download files)
     ├── data                   # Including traffic data (download), adj files (generated), and the meta data
     ├── lib
     │   |──  utils.py          # Codes of preprocessing datasets and calculating metrics
@@ -72,6 +72,9 @@ Notably, we show that spatiotemporal graphs can be patched on the spatial dimens
 
 ## Datasets
 You can access the well pre-processed datasets from [[Google Drive]](https://drive.google.com/drive/folders/1BDH1C66BCKBe7ge8G-rBaj1j3p0iR0TC?usp=sharing), then place the downloaded contents under the correspond dataset folder such as `./data/SD`.
+
+# PreTrained Weights
+You can access the pretrained weights from [[Google Drive]](https://drive.google.com/drive/folders/1hFyV2C10P3wl3OJkNNhhHb2LTKXcJ2mO?usp=sharing), then place the downloaded contents under the constructed cpt folder `./cpt`.
 
 ## Quick Demos
 1. Download datasets and place them under `./data`
