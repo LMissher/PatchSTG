@@ -6,8 +6,6 @@
 <div align="center">
 
 ![](https://img.shields.io/github/last-commit/LMissher/PatchSTG?color=green)
-![](https://img.shields.io/github/stars/LMissher/PatchSTG?color=yellow)
-![](https://img.shields.io/github/forks/LMissher/PatchSTG?color=lightblue)
 ![](https://img.shields.io/badge/PRs-Welcome-green)
 
 </div>
