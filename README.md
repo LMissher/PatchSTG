@@ -47,12 +47,12 @@ Notably, we show that spatiotemporal graphs can be patched on the spatial dimens
 </p>
 
 ## Requirements
-- torch
-- timm
-- scikit_learn
-- tqdm
-- pandas
-- numpy
+- torch==1.11.0
+- timm==1.0.12
+- scikit_learn==1.0.2
+- tqdm==4.67.1
+- pandas==1.4.1
+- numpy==1.22.3
 
 ## Folder Structure
 
@@ -60,7 +60,7 @@ Notably, we show that spatiotemporal graphs can be patched on the spatial dimens
 └── code-and-data
     ├── config                 # Including detail configurations
     ├── cpt                    # Storing pre-trained weight files
-    ├── data                   # Including adj files and the meta data
+    ├── data                   # Including traffic data (download), adj files (generated), and the meta data
     ├── lib
     │   |──  utils.py          # Codes of preprocessing datasets and calculating metrics
     ├── log                    # Storing log files
