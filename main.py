@@ -10,7 +10,7 @@ import configparser
 from tqdm import tqdm
 
 from models.model import PatchSTG
-from lib.utils_final import log_string, loadData, _compute_loss, metric
+from lib.utils import log_string, loadData, _compute_loss, metric
 
 class Solver(object):
     DEFAULTS = {}
@@ -155,7 +155,7 @@ class Solver(object):
 
     def test(self):
         log_string(log, "======================TEST MODE======================")
-        self.model.load_state_dict(torch.load(self.model_file))
+        self.model.load_state_dict(torch.load(self.model_file, map_location=self.device))
         self.model.eval()
         num_val = self.testX.shape[0]
         pred = []
