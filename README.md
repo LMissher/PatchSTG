@@ -5,21 +5,15 @@
 
 <div align="center">
 
-![](https://img.shields.io/github/last-commit/LMissher/PatchSTG?color=green)
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/efficient-large-scale-traffic-forecasting/traffic-prediction-on-largest)](https://paperswithcode.com/sota/traffic-prediction-on-largest?p=efficient-large-scale-traffic-forecasting)
+[![Arxiv link](https://img.shields.io/static/v1?label=arXiv&message=PatchSTG&color=red&logo=arxiv)](https://arxiv.org/abs/2412.09972)
 ![](https://img.shields.io/badge/PRs-Welcome-green)
 
 </div>
 
 <div align="center">
 
-**[<a href="https://arxiv.org/abs/2412.09972">Paper Page</a>]**
-
-
-</div>
-
-<div align="center">
-
-<img src="./imgs/sketch.png" width="300">
+<img src="./imgs/sketch.png" width="600">
 
 </div>
 
@@ -43,13 +37,13 @@ PatchSTG is an attention-based dynamic spatial modeling method that uses irregul
 Notably, we show that spatiotemporal graphs can be patched on the spatial dimension, effectively reducing complexity in attention.
 
 <p align="center">
-<img src="./imgs/frame.png" height = "400" alt="" align=center />
+<img src="./imgs/frame.png" height = "300" alt="" align=center />
 </p>
 
 - PatchSTG comprises four components: (1) embedding the input traffic into high-dimensional representations with spatio-temporal properties, (2) segmenting the large-scale input into balanced and non-overlapped patches on the spatial dimension with irregularly distributed points, (3) using depth and breadth attentions on the patched input to capture local and global spatial dependencies efficiently, and (4) projecting representations to the predicted future traffic.
 
 <p align="center">
-<img src="./imgs/patching.png" height = "80" alt="" align=center />
+<img src="./imgs/patching.png"  width="600" alt="" align=center />
 </p>
 
 ## Requirements
