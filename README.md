@@ -13,7 +13,15 @@
 
 <div align="center">
 
-<img src="./imgs/sketch.png" width="600">
+**[<a href="https://www.bilibili.com/video/BV1f5C3Y5Eb2/?spm_id_from=333.999.0.0&vd_source=ff21219783fd1e65d312b09da53b31c5">AITIME Talk</a>]**
+**[<a href="https://mp.weixin.qq.com/s/M5w6I52tCIVsQXZ1ombVqA">时空探索之旅中文解读</a>]**
+**[<a href="https://zhuanlan.zhihu.com/p/14255424377">知乎中文解读</a>]**
+
+</div>
+
+<div align="center">
+
+<img src="./imgs/sketch.png" width="500">
 
 </div>
 
