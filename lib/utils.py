@@ -49,10 +49,10 @@ def seq2instance(data, P, Q):
     num_step, nodes, dims = data.shape
     num_sample = num_step - P - Q + 1
     x = np.zeros(shape = (num_sample, P, nodes, dims))
-    y = np.zeros(shape = (num_sample, P, nodes, dims))
+    y = np.zeros(shape = (num_sample, Q, nodes, dims))
     for i in range(num_sample):
         x[i] = data[i : i + P]
-        y[i] = data[i + Q : i + P + Q]
+        y[i] = data[i + P : i + P + Q]
     return x, y
 
 def read_meta(path):
