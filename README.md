@@ -54,6 +54,14 @@ Notably, we show that spatiotemporal graphs can be patched on the spatial dimens
 <img src="./imgs/patching.png"  width="600" alt="" align=center />
 </p>
 
+## Hyper-parameters
+- tps: temporal patch size
+- tpn: temporal patch number ($tps\times tpn==input\_len$)
+- recur: KDTree depth ($recur<\lfloor log_2(nodes)\rfloor$)
+- sps: KDTree leaf size
+- spn: KDTree nodes ($spn=2^{recur}$)
+- factors: $sps\times factors$ is the spatial patch size and $spn/factors$ is the spatial patch number
+
 ## Requirements
 - torch==1.11.0
 - timm==1.0.12
