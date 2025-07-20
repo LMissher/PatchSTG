@@ -42,7 +42,7 @@ class Solver(object):
         self.build_model()
     
     def build_model(self):
-        self.model = PatchSTG(self.tem_patchsize, self.tem_patchnum,
+        self.model = PatchSTG(self.output_len, self.tem_patchsize, self.tem_patchnum,
                             self.node_num, self.spa_patchsize, self.spa_patchnum,
                             self.tod, self.dow,
                             self.layers, self.factors,
