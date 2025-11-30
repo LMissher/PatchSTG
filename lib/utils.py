@@ -45,16 +45,6 @@ def masked_mae(preds, labels, null_val=np.nan):
 def _compute_loss(y_true, y_predicted):
         return masked_mae(y_predicted, y_true, 0.0)
 
-def seq2instance(data, P, Q):
-    num_step, nodes, dims = data.shape
-    num_sample = num_step - P - Q + 1
-    x = np.zeros(shape = (num_sample, P, nodes, dims))
-    y = np.zeros(shape = (num_sample, Q, nodes, dims))
-    for i in range(num_sample):
-        x[i] = data[i : i + P]
-        y[i] = data[i + P : i + P + Q]
-    return x, y
-
 def read_meta(path):
     meta = pd.read_csv(path)
     lat = meta['Lat'].values
@@ -62,7 +52,7 @@ def read_meta(path):
     locations = np.stack([lat,lng], 0)
     return locations
 
-def construct_adj(data, num_node):
+def construct_adj(data):
     # construct the adj through the cosine similarity
     data_mean = np.mean([data[24*12*i: 24*12*(i+1)] for i in range(data.shape[0]//(24*12))], axis=0)
     data_mean = data_mean.squeeze().T
@@ -82,7 +72,7 @@ def augmentAlign(dist_matrix, auglen):
             break
     return np.array(augidx, dtype=int)
 
-def reorderData(parts_idx, mxlen, adj, sps):
+def reorderData(parts_idx, adj, sps):
     # parts_idx: segmented indices by kdtree
     # adj: pad similar points through the cos_sim adj
     # sps: spatial patch (small leaf nodes) size for padding
@@ -112,58 +102,31 @@ def kdTree(locations, times, axis):
     part1, part2 = np.sort(sorted_idx[:locations.shape[1]//2]), np.sort(sorted_idx[locations.shape[1]//2:])
     parts = []
     if times == 1:
-        return [part1, part2], max(part1.shape[0], part2.shape[0])
+        return [part1, part2]
     else:
-        left_parts, lmxlen = kdTree(locations[:,part1], times-1, axis^1)
-        right_parts, rmxlen = kdTree(locations[:,part2], times-1, axis^1)
+        left_parts = kdTree(locations[:,part1], times-1, axis^1)
+        right_parts = kdTree(locations[:,part2], times-1, axis^1)
         for part in left_parts:
             parts.append(part1[part])
         for part in right_parts:
             parts.append(part2[part])
-    return parts, max(lmxlen, rmxlen)
+    return parts
 
-def loadData(filepath, metapath, P, Q, train_ratio, test_ratio, adjpath, recurtimes, tod, dow, sps, log):
-    # Traffic
-    Traffic = np.load(filepath)['data'][...,:1]
+def loadSpatialManagedIndices(data, metapath, adjpath, recurtimes, sps, log):
+    # load data
+    trainData = data.data_x
     locations = read_meta(metapath)
-    num_step = Traffic.shape[0]
-    # temporal positions
-    TE = np.zeros([num_step, 2])
-    TE[:,0] = np.array([i % tod for i in range(num_step)])
-    TE[:,1] = np.array([(i // tod) % dow for i in range(num_step)])
-    TE_tile = np.repeat(np.expand_dims(TE, 1), Traffic.shape[1], 1)
-    log_string(log, f'Shape of data: {Traffic.shape}')
-    log_string(log, f'Shape of locations: {locations.shape}')
-    # train/val/test 
-    train_steps = round(train_ratio * num_step)
-    test_steps = round(test_ratio * num_step)
-    val_steps = num_step - train_steps - test_steps
-    trainData, trainTE = Traffic[: train_steps], TE_tile[: train_steps]
-    valData, valTE = Traffic[train_steps : train_steps + val_steps], TE_tile[train_steps : train_steps + val_steps]
-    testData, testTE = Traffic[-test_steps :], TE_tile[-test_steps :]
     # load adj for padding
     if os.path.exists(adjpath):
         adj = np.load(adjpath)
     else:
-        adj = construct_adj(trainData, locations.shape[1])
+        adj = construct_adj(trainData)
         np.save(adjpath, adj)
     # partition and pad data with new indices
-    parts_idx, mxlen = kdTree(locations, recurtimes, 0)
-    ori_parts_idx, reo_parts_idx, reo_all_idx = reorderData(parts_idx, mxlen, adj, sps)
-    # X, Y
-    trainX, trainY = seq2instance(trainData, P, Q)
-    valX, valY = seq2instance(valData, P, Q)
-    testX, testY = seq2instance(testData, P, Q)
-    trainXTE, trainYTE = seq2instance(trainTE, P, Q)
-    valXTE, valYTE = seq2instance(valTE, P, Q)
-    testXTE, testYTE = seq2instance(testTE, P, Q)
-    # normalization
-    mean, std = np.mean(trainX), np.std(trainX)
+    parts_idx = kdTree(locations, recurtimes, 0)
+    ori_parts_idx, reo_parts_idx, reo_all_idx = reorderData(parts_idx, adj, sps)
     # log
-    log_string(log, f'Shape of Train: {trainY.shape}')
-    log_string(log, f'Shape of Validation: {valY.shape}')
-    log_string(log, f'Shape of Test: {testY.shape}')
-    log_string(log, f'Mean: {mean} & Std: {std}')
+    log_string(log, f'Padded Nodes: {reo_all_idx.shape[0]}')
     
-    return trainX, trainY, trainXTE, trainYTE, valX, valY, valXTE, valYTE, testX, testY, testXTE, testYTE, mean, std, ori_parts_idx, reo_parts_idx, reo_all_idx
+    return ori_parts_idx, reo_parts_idx, reo_all_idx
     
