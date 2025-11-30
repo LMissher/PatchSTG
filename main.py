@@ -10,7 +10,8 @@ import configparser
 from tqdm import tqdm
 
 from models.model import PatchSTG
-from lib.utils import log_string, loadData, _compute_loss, metric
+from lib.utils import log_string, loadSpatialManagedIndices, _compute_loss, metric
+from lib.data_loader import data_provider
 
 class Solver(object):
     DEFAULTS = {}
@@ -19,21 +20,15 @@ class Solver(object):
         self.__dict__.update(Solver.DEFAULTS, **config)
 
         log_string(log, '\n------------ Loading Data -------------')
-        # tod and dow means the time of the day and the day of the week
+        self.train_data, self.train_loader = self._get_data(flag='train')
+        _, self.vali_loader = self._get_data(flag='val')
+        _, self.test_loader = self._get_data(flag='test')
+
         # ori_parts_idx indicates the original indices of input points
         # reo_parts_idx indicates the patched indices of input points
         # reo_all_idx indicates the patched indices of input and padded points
-        self.trainX, self.trainY, self.trainXTE, self.trainYTE,\
-        self.valX, self.valY, self.valXTE, self.valYTE,\
-        self.testX, self.testY, self.testXTE, self.testYTE,\
-        self.mean, self.std,\
-        self.ori_parts_idx, self.reo_parts_idx, self.reo_all_idx = loadData(
-                                        self.traffic_file, self.meta_file,
-                                        self.input_len, self.output_len,
-                                        self.train_ratio, self.test_ratio,
-                                        self.adj_file, self.recur_times,
-                                        self.tod, self.dow,
-                                        self.spa_patchsize, log)
+        self.ori_parts_idx, self.reo_parts_idx, self.reo_all_idx = loadSpatialManagedIndices(self.train_data, self.meta_file, self.adj_file,
+                                                                                                self.recur_times, self.spa_patchsize, log)
         log_string(log, '------------ End -------------\n')
 
         self.best_epoch = 0
@@ -42,7 +37,7 @@ class Solver(object):
         self.build_model()
     
     def build_model(self):
-        self.model = PatchSTG(self.output_len, self.tem_patchsize, self.tem_patchnum,
+        self.model = PatchSTG(self.tem_patchsize, self.tem_patchnum,
                             self.node_num, self.spa_patchsize, self.spa_patchnum,
                             self.tod, self.dow,
                             self.layers, self.factors,
@@ -57,29 +52,31 @@ class Solver(object):
             milestones=[1,35,40],
             gamma=0.5,
         )
+    
+    def _get_data(self, flag):
+        # tod and dow means the time of the day and the day of the week
+        data_set, data_loader = data_provider(self.num_workers, self.batch_size, self.traffic_file,
+                                                self.train_ratio, self.test_ratio,
+                                                self.input_len, self.output_len,
+                                                self.tod, self.dow, flag, log)
+        return data_set, data_loader
 
     def vali(self):
         self.model.eval()
-        num_val = self.valX.shape[0]
         pred = []
         label = []
 
-        num_batch = math.ceil(num_val / self.batch_size)
         with torch.no_grad():
-            for batch_idx in range(num_batch):
+            for i, (batch_x, batch_y, batch_x_te, batch_y_te) in enumerate(self.vali_loader):
                 if isinstance(self.model, torch.nn.Module):
-                    start_idx = batch_idx * self.batch_size
-                    end_idx = min(num_val, (batch_idx + 1) * self.batch_size)
+                    batch_x = batch_x.float().to(self.device)
+                    batch_y = batch_y.float().to(self.device)
+                    batch_x_te = batch_x_te.to(self.device)
 
-                    X = self.valX[start_idx : end_idx]
-                    Y = self.valY[start_idx : end_idx]
-                    TE = torch.from_numpy(self.valXTE[start_idx : end_idx]).to(self.device)
-                    NormX = torch.from_numpy((X-self.mean)/self.std).float().to(self.device)
+                    y_hat = self.model(batch_x, batch_x_te)
 
-                    y_hat = self.model(NormX,TE)
-
-                    pred.append(y_hat.cpu().numpy()*self.std+self.mean)
-                    label.append(Y)
+                    pred.append(self.train_data.inverse_transform(y_hat).cpu().numpy())
+                    label.append(batch_y.cpu().numpy())
         
         pred = np.concatenate(pred, axis = 0)
         label = np.concatenate(label, axis = 0)
@@ -106,33 +103,23 @@ class Solver(object):
     def train(self):
         log_string(log, "======================TRAIN MODE======================")
         min_loss = 10000000.0
-        num_train = self.trainX.shape[0]
 
         for epoch in tqdm(range(1,self.max_epoch+1)):
             self.model.train()
-            train_l_sum, train_acc_sum, batch_count, start = 0.0, 0.0, 0, time.time()
-            permutation = np.random.permutation(num_train)
-            self.trainX = self.trainX[permutation]
-            self.trainY = self.trainY[permutation]
-            self.trainXTE = self.trainXTE[permutation]
-            num_batch = math.ceil(num_train / self.batch_size)
+            train_l_sum, batch_count, start = 0.0, 0, time.time()
+            
+            num_batch = math.ceil(len(self.train_data) / self.batch_size)
             with tqdm(total=num_batch) as pbar:
-                for batch_idx in range(num_batch):
-                    start_idx = batch_idx * self.batch_size
-                    end_idx = min(num_train, (batch_idx + 1) * self.batch_size)
-
-                    X = self.trainX[start_idx : end_idx]
-                    Y = self.trainY[start_idx : end_idx]
-                    TE = torch.from_numpy(self.trainXTE[start_idx : end_idx]).to(self.device)
-                    NormX = torch.from_numpy((X-self.mean)/self.std).float().to(self.device)
-                    
-                    Y = torch.from_numpy(Y).float().to(self.device)
+                for i, (batch_x, batch_y, batch_x_te, batch_y_te) in enumerate(self.train_loader):
+                    batch_x = batch_x.float().to(self.device)
+                    batch_y = batch_y.float().to(self.device)
+                    batch_x_te = batch_x_te.to(self.device)
                     
                     self.optimizer.zero_grad()
 
-                    y_hat = self.model(NormX,TE)
+                    y_hat = self.model(batch_x, batch_x_te)
 
-                    loss = _compute_loss(Y, y_hat*self.std+self.mean)
+                    loss = _compute_loss(batch_y, self.train_data.inverse_transform(y_hat))
                     
                     loss.backward()
                     torch.nn.utils.clip_grad_norm_(self.model.parameters(), 5)
@@ -142,6 +129,7 @@ class Solver(object):
 
                     batch_count += 1
                     pbar.update(1)
+
             log_string(log, 'epoch %d, lr %.6f, loss %.4f, time %.1f sec'
                 % (epoch, self.optimizer.param_groups[0]['lr'], train_l_sum / batch_count, time.time() - start))
             mae, rmse, mape = self.vali()
@@ -157,26 +145,20 @@ class Solver(object):
         log_string(log, "======================TEST MODE======================")
         self.model.load_state_dict(torch.load(self.model_file, map_location=self.device))
         self.model.eval()
-        num_val = self.testX.shape[0]
         pred = []
         label = []
 
-        num_batch = math.ceil(num_val / self.batch_size)
         with torch.no_grad():
-            for batch_idx in range(num_batch):
+            for i, (batch_x, batch_y, batch_x_te, batch_y_te) in enumerate(self.test_loader):
                 if isinstance(self.model, torch.nn.Module):
-                    start_idx = batch_idx * self.batch_size
-                    end_idx = min(num_val, (batch_idx + 1) * self.batch_size)
+                    batch_x = batch_x.float().to(self.device)
+                    batch_y = batch_y.float().to(self.device)
+                    batch_x_te = batch_x_te.to(self.device)
 
-                    X = self.testX[start_idx : end_idx]
-                    Y = self.testY[start_idx : end_idx]
-                    TE = torch.from_numpy(self.testXTE[start_idx : end_idx]).to(self.device)
-                    NormX = torch.from_numpy((X-self.mean)/self.std).float().to(self.device)
+                    y_hat = self.model(batch_x, batch_x_te)
 
-                    y_hat = self.model(NormX,TE)
-
-                    pred.append(y_hat.cpu().numpy()*self.std+self.mean)
-                    label.append(Y)
+                    pred.append(self.train_data.inverse_transform(y_hat).cpu().numpy())
+                    label.append(batch_y.cpu().numpy())
         
         pred = np.concatenate(pred, axis = 0)
         label = np.concatenate(label, axis = 0)
@@ -207,6 +189,7 @@ if __name__ == '__main__':
     config = configparser.ConfigParser()
     config.read(args.config)
 
+    parser.add_argument('--num_workers', type = int, default = 32)
     parser.add_argument('--cuda', type=str, default=config['train']['cuda'])
     parser.add_argument('--seed', type = int, default = config['train']['seed'])
     parser.add_argument('--batch_size', type = int, default = config['train']['batch_size'])
@@ -259,6 +242,6 @@ if __name__ == '__main__':
 
     solver = Solver(vars(args))
 
-    # solver.train()
+    solver.train()
     solver.test()
     
