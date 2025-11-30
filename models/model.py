@@ -8,14 +8,14 @@ class WindowAttBlock(nn.Module):
         mlp_hidden_dim = int(hidden_size * mlp_ratio)
         self.num, self.size = num, size
 
-        self.nnorm1 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
+        self.nnorm1 = nn.LayerNorm(hidden_size)
         self.nattn = Attention(hidden_size, num_heads=num_heads, qkv_bias=True, attn_drop=0.1, proj_drop=0.1)
-        self.nnorm2 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
+        self.nnorm2 = nn.LayerNorm(hidden_size)
         self.nmlp = Mlp(in_features=hidden_size, hidden_features=mlp_hidden_dim, act_layer=nn.GELU, drop=0.1)
 
-        self.snorm1 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
+        self.snorm1 = nn.LayerNorm(hidden_size)
         self.sattn = Attention(hidden_size, num_heads=num_heads, qkv_bias=True, attn_drop=0.1, proj_drop=0.1)
-        self.snorm2 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
+        self.snorm2 = nn.LayerNorm(hidden_size)
         self.smlp = Mlp(in_features=hidden_size, hidden_features=mlp_hidden_dim, act_layer=nn.GELU, drop=0.1)
 
     def forward(self, x):
@@ -38,7 +38,7 @@ class WindowAttBlock(nn.Module):
         return x.reshape(B,T,-1,D)
 
 class PatchSTG(nn.Module):
-    def __init__(self, output_len, tem_patchsize, tem_patchnum,
+    def __init__(self, tem_patchsize, tem_patchnum,
                         node_num, spa_patchsize, spa_patchnum,
                         tod, dow,
                         layers, factors,
@@ -75,7 +75,7 @@ class PatchSTG(nn.Module):
         ])
 
         # projection decoder -> section 4.4 in paper
-        self.regression_conv = nn.Conv2d(in_channels=tem_patchnum*dims, out_channels=output_len, kernel_size=(1, 1), bias=True)
+        self.regression_conv = nn.Conv2d(in_channels=tem_patchnum*dims, out_channels=tem_patchsize*tem_patchnum, kernel_size=(1, 1), bias=True)
 
     def forward(self, x, te):
         # x: [B,T,N,1] input traffic
